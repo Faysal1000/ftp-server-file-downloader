@@ -90,6 +90,13 @@ class NativeApi:
         updater.update_cancel_event.set()
         return True
 
+    def close_app(self) -> bool:
+        def exit_func():
+            time.sleep(0.1)
+            os._exit(0)
+        threading.Thread(target=exit_func, daemon=True).start()
+        return True
+
     def open_url(self, url: str) -> bool:
         import webbrowser
         try:

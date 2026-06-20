@@ -972,8 +972,12 @@ function handleEvent(event) {
                 triggerNotification("File Downloader by Faysal", "Download session finished.");
                 playSoundAlert("success");
             }
-            if (state.config.auto_close && window.pywebview) {
-                window.close();
+            if (state.config.auto_close) {
+                if (window.pywebview?.api?.close_app) {
+                    window.pywebview.api.close_app();
+                } else {
+                    window.close();
+                }
             }
             toast("Download session finished", "success");
             break;
