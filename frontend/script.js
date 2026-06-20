@@ -588,6 +588,7 @@ function refreshFolderSelection() {
         let selectedCount = 0;
         let partialCount = 0;
         let total = 0;
+        let childStatuses = [];
         node.children.forEach((childId) => {
             const child = state.nodes.get(childId);
             if (!child) return;
@@ -597,9 +598,32 @@ function refreshFolderSelection() {
             }
             if (child.selected) selectedCount += 1;
             if (child.partial) partialCount += 1;
+            if (child.status) childStatuses.push(child.status);
         });
-        node.selected = total > 0 && selectedCount === total && partialCount === 0;
-        node.partial = total > 0 && (partialCount > 0 || (selectedCount > 0 && selectedCount < total));
+        if (total > 0) {
+            node.selected = selectedCount === total && partialCount === 0;
+            node.partial = partialCount > 0 || (selectedCount > 0 && selectedCount < total);
+            
+            if (childStatuses.includes("downloading")) {
+                node.status = "downloading";
+            } else if (childStatuses.includes("paused")) {
+                node.status = "paused";
+            } else if (childStatuses.includes("queued")) {
+                node.status = "queued";
+            } else if (childStatuses.includes("error")) {
+                node.status = "error";
+            } else if (childStatuses.includes("cancelled")) {
+                node.status = "cancelled";
+            } else if (childStatuses.every((s) => s === "complete" || s === "skipped")) {
+                node.status = childStatuses.every((s) => s === "skipped") ? "skipped" : "complete";
+            } else {
+                node.status = "ready";
+            }
+        } else {
+            node.selected = false;
+            node.partial = false;
+            node.status = "ready";
+        }
         return node.selected;
     };
     state.roots.forEach((id) => visit(state.nodes.get(id)));
