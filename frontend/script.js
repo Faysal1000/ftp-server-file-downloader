@@ -35,7 +35,6 @@ const els = {
     refreshHistoryBtn: $("#refresh-history-btn"),
     saveSettingsBtn: $("#save-settings-btn"),
     resetSettingsBtn: $("#reset-settings-btn"),
-    openConfigBtn: $("#open-config-btn"),
     browseFolderBtn: $("#browse-folder-btn"),
     openFolderBtn: $("#open-folder-btn"),
     systemList: $("#system-list"),
@@ -1212,13 +1211,6 @@ function attachEvents() {
         applyConfigToForm(state.config);
         applyAppearance();
         toast("Defaults restored", "success");
-    });
-    els.openConfigBtn.addEventListener("click", async () => {
-        if (window.pywebview?.api?.open_config) {
-            await window.pywebview.api.open_config();
-        } else {
-            await api("/api/config/open", { method: "POST" });
-        }
     });
     els.browseFolderBtn.addEventListener("click", browseFolder);
     els.openFolderBtn.addEventListener("click", () => openFolder(settingEls.download_folder.value));
