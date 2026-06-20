@@ -42,22 +42,33 @@ def _build_update_info(release_data):
 
     if system == "Darwin":
         if "arm" in machine or "aarch" in machine:
-            asset_name = "FTP-Downloader-macOS-AppleSilicon.zip"
+            asset_name = "File-Downloader-macOS-AppleSilicon.zip"
         else:
-            asset_name = "FTP-Downloader-macOS-Intel.zip"
+            asset_name = "File-Downloader-macOS-Intel.zip"
         package_type = "mac_zip"
     elif system == "Windows":
-        asset_name = "FTP-Downloader-Windows.exe"
+        asset_name = "File-Downloader-Windows.exe"
         package_type = "windows_exe"
     else:
-        asset_name = "FTP-Downloader-Linux"
+        asset_name = "File-Downloader-Linux"
         package_type = "linux_binary"
 
-    download_url = f"{UPDATE_DOWNLOAD_BASE_URL}/{asset_name}"
+    matched_asset_url = None
     for asset in release_data.get("assets", []):
-        if asset.get("name") == asset_name and asset.get("browser_download_url"):
-            download_url = asset["browser_download_url"]
+        name = asset.get("name", "")
+        if name == asset_name:
+            matched_asset_url = asset.get("browser_download_url")
             break
+
+    if not matched_asset_url and system == "Darwin":
+        other_mac_asset = "File-Downloader-macOS-Intel.zip" if asset_name == "File-Downloader-macOS-AppleSilicon.zip" else "File-Downloader-macOS-AppleSilicon.zip"
+        for asset in release_data.get("assets", []):
+            if asset.get("name") == other_mac_asset:
+                matched_asset_url = asset.get("browser_download_url")
+                asset_name = other_mac_asset
+                break
+
+    download_url = matched_asset_url or f"{UPDATE_DOWNLOAD_BASE_URL}/{asset_name}"
 
     return {
         "version": release_data.get("tag_name", "latest"),
@@ -198,7 +209,7 @@ def perform_update(update_info):
     threading.Thread(target=update_worker, daemon=True).start()
 
 def _find_extracted_macos_app(extract_dir):
-    expected_app = extract_dir / "FTP-Downloader.app"
+    expected_app = extract_dir / "File-Downloader.app"
     if expected_app.exists():
         return expected_app
     for app_path in extract_dir.rglob("*.app"):

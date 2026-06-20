@@ -70,25 +70,40 @@ jobs:
       - name: Package Windows
         if: runner.os == 'Windows'
         run: |
-          move dist\File-Downloader.exe "dist\${{ matrix.artifact_name }}"
+          copy dist\File-Downloader.exe "dist\${{ matrix.artifact_name }}"
+          copy dist\File-Downloader.exe "dist\FTP-Downloader-Windows.exe"
 
       - name: Package macOS
         if: runner.os == 'macOS'
         run: |
           cd dist
           zip -r "${{ matrix.artifact_name }}" "File-Downloader.app"
+          zip -r "FTP-Downloader-macOS-AppleSilicon.zip" "File-Downloader.app"
 
       - name: Package Linux
         if: runner.os == 'Linux'
         run: |
-          mv dist/File-Downloader "dist/${{ matrix.artifact_name }}"
+          cp dist/File-Downloader "dist/${{ matrix.artifact_name }}"
+          cp dist/File-Downloader "dist/FTP-Downloader-Linux"
           chmod +x "dist/${{ matrix.artifact_name }}"
+          chmod +x "dist/FTP-Downloader-Linux"
 
-      - name: Upload artifact
+      - name: Upload File-Downloader artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_path }}
+          retention-days: 90
+
+      - name: Upload FTP-Downloader artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTP-${{ matrix.artifact_name }}
+          path: |
+            dist/FTP-Downloader-Windows.exe
+            dist/FTP-Downloader-macOS-AppleSilicon.zip
+            dist/FTP-Downloader-Linux
+          if-no-files-found: ignore
           retention-days: 90
 
   release:
