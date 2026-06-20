@@ -52,7 +52,11 @@ jobs:
       - name: Build executable (Unix)
         if: runner.os != 'Windows'
         run: |
-          pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --add-data "frontend:frontend" main.py
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            pyinstaller --noconfirm --onedir --windowed --name "FTP-Downloader" --add-data "frontend:frontend" main.py
+          else
+            pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --add-data "frontend:frontend" main.py
+          fi
 
       - name: Build executable (Windows)
         if: runner.os == 'Windows'

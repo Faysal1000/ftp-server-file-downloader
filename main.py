@@ -18,7 +18,7 @@ except ImportError as exc:
         "  /opt/miniconda3/bin/conda run -n py312 pip install -r requirements.txt"
     ) from exc
 
-from backend.server import CONFIG_PATH, app as flask_app, ensure_data_files
+from backend.server import CONFIG_PATH, FRONTEND_DIR, app as flask_app, ensure_data_files
 import updater
 
 def find_free_port(start: int = 5050) -> int:
@@ -86,6 +86,59 @@ class NativeApi:
         updater.perform_update(update_info)
         return True
 
+    def export_logs(self, logs_text: str) -> bool:
+        window = webview.windows[0] if webview.windows else None
+        if not window:
+            return False
+        
+        default_filename = f"samonline-log-{int(time.time())}.txt"
+        result = window.create_file_dialog(
+            webview.SAVE_DIALOG, 
+            directory=str(Path.home() / "Desktop"), 
+            save_filename=default_filename
+        )
+        
+        if result:
+            save_path = result if isinstance(result, str) else result[0]
+            try:
+                Path(save_path).write_text(logs_text, encoding="utf-8")
+                return True
+            except Exception:
+                pass
+        return False
+
+    def show_notification(self, title: str, message: str) -> bool:
+        try:
+            if sys.platform == "darwin":
+                escaped_title = title.replace('\\', '\\\\').replace('"', '\\"')
+                escaped_message = message.replace('\\', '\\\\').replace('"', '\\"')
+                cmd = f'display notification "{escaped_message}" with title "{escaped_title}"'
+                subprocess.Popen(["osascript", "-e", cmd])
+                return True
+            elif os.name == "nt" or sys.platform == "win32":
+                escaped_title = title.replace("'", "''").replace('"', '`"')
+                escaped_message = message.replace("'", "''").replace('"', '`"')
+                ps_script = f"""
+                [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+                $Template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+                $TextNodes = $Template.GetElementsByTagName("text")
+                $TextNodes.Item(0).AppendChild($Template.CreateTextNode("{escaped_title}")) | Out-Null
+                $TextNodes.Item(1).AppendChild($Template.CreateTextNode("{escaped_message}")) | Out-Null
+                $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("SAMOnline FTP Downloader")
+                $Toast = [Windows.UI.Notifications.ToastNotification]::new($Template)
+                $Notifier.Show($Toast)
+                """
+                subprocess.Popen([
+                    "powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script
+                ])
+                return True
+            else:
+                subprocess.Popen(["notify-send", title, message])
+                return True
+        except Exception:
+            return False
+
+
 
 def main() -> None:
     ensure_data_files()
@@ -94,6 +147,7 @@ def main() -> None:
     server_thread.start()
     wait_for_server(port)
 
+    icon_path = FRONTEND_DIR / "assets" / "file_icon.png"
     webview.create_window(
         "SAMOnline FTP Downloader",
         f"http://127.0.0.1:{port}/",

@@ -65,8 +65,7 @@ const settingEls = {
     sound_alert: $("#setting-sound"),
     notify_error: $("#setting-notify-error"),
     theme: $("#setting-theme"),
-    appearance_preset: $("#setting-preset"),
-    accent_color: $("#setting-accent"),
+    appearance_preset: $("#setting-appearance-preset"),
     font_size: $("#setting-font-size"),
 };
 
@@ -238,6 +237,8 @@ function applyAppearance() {
     applyCssVar("--accent-strong", `rgba(${r}, ${g}, ${b}, 0.24)`);
     applyCssVar("--accent-border", `rgba(${r}, ${g}, ${b}, 0.46)`);
     applyCssVar("--accent-shadow", `rgba(${r}, ${g}, ${b}, 0.24)`);
+
+
     applyCssVar("--focus-ring", `rgba(${r}, ${g}, ${b}, 0.16)`);
     applyCssVar("--purple", accent);
     applyCssVar("--purple-2", accent2);
@@ -484,11 +485,12 @@ function renderTree() {
 function renderRow(node, depth) {
     const indent = depth * 20;
     const isFolder = node.type === "folder";
-    const icon = isFolder ? "📁" : "📄";
+    const icon = isFolder ? "📁" : `<img src="assets/file_icon.png" class="file-icon" alt="File">`;
     const expander = isFolder
         ? `<button class="expander" data-action="toggle-folder" data-id="${node.id}" aria-label="Toggle folder">${node.expanded ? "▼" : "▶"}</button>`
         : `<span class="expander"></span>`;
-    const progress = isFolder ? "" : `<div class="mini-track"><div class="mini-fill" style="width:${Math.max(0, Math.min(100, node.progress || 0))}%"></div></div>`;
+    const progressVal = Math.round(node.progress || 0);
+    const progress = isFolder ? "" : `<div style="display:flex; align-items:center; gap:6px; width:100%;"><div class="mini-track" style="flex:1;"><div class="mini-fill" style="width:${Math.max(0, Math.min(100, node.progress || 0))}%"></div></div><span class="progress-text">${progressVal}%</span></div>`;
     const speed = isFolder ? "–" : (node.speed ? `${formatBytes(node.speed)}/s` : "–");
     const size = isFolder ? "–" : (node.size ? formatBytes(node.size) : "Unknown");
     const skip = node.status === "downloading"
@@ -567,14 +569,17 @@ function updateStats() {
     const totalFiles = files.length;
     const complete = files.filter((file) => file.status === "complete").length;
     const remaining = files.filter((file) => !["complete", "skipped"].includes(file.status)).length;
-    const totalSize = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
-    const downloaded = files.reduce((sum, file) => {
+    
+    const activeFiles = files.filter((f) => f.status !== "ready" && f.status !== "skipped");
+    const totalSize = activeFiles.reduce((sum, file) => sum + Number(file.size || 0), 0);
+    const downloaded = activeFiles.reduce((sum, file) => {
         if (file.size) return sum + Number(file.size) * Math.max(0, Math.min(100, Number(file.progress || 0))) / 100;
         return sum + (file.status === "complete" ? 1 : 0);
     }, 0);
-    const unknownTotal = files.some((file) => !file.size);
-    const speed = files.reduce((sum, file) => sum + Number(file.speed || 0), 0);
-    const progress = totalSize ? downloaded / totalSize * 100 : (totalFiles ? complete / totalFiles * 100 : 0);
+    
+    const unknownTotal = activeFiles.some((file) => !file.size);
+    const speed = activeFiles.reduce((sum, file) => sum + Number(file.speed || 0), 0);
+    const progress = totalSize ? downloaded / totalSize * 100 : (activeFiles.length ? activeFiles.filter(f => f.status === "complete").length / activeFiles.length * 100 : 0);
     const remainingBytes = Math.max(0, totalSize - downloaded);
 
     statsEls.totalFiles.textContent = totalFiles;
@@ -739,6 +744,25 @@ async function skipFile(id) {
     });
 }
 
+function triggerNotification(title, message, isError = false) {
+    const configKey = isError ? "notify_error" : "notify_complete";
+    if (state.config[configKey]) {
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.show_notification) {
+            window.pywebview.api.show_notification(title, message);
+        } else if ("Notification" in window) {
+            if (Notification.permission === "granted") {
+                new Notification(title, { body: message });
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then((permission) => {
+                    if (permission === "granted") {
+                        new Notification(title, { body: message });
+                    }
+                });
+            }
+        }
+    }
+}
+
 function handleEvent(event) {
     switch (event.type) {
         case "hello":
@@ -789,6 +813,7 @@ function handleEvent(event) {
             state.isScanning = false;
             els.activityText.textContent = "Inspection failed";
             toast(event.error || "Scan failed", "error");
+            triggerNotification("Inspection Failed", event.error || "A scan error occurred.", true);
             setBusyControls();
             break;
         case "download_started":
@@ -834,8 +859,18 @@ function handleEvent(event) {
             setBusyControls();
             updateStorage();
             loadHistory();
-            if (state.config.notify_complete && "Notification" in window && Notification.permission === "granted") {
-                new Notification("SAMOnline FTP Downloader", { body: "Download session finished." });
+            if (event.files_failed > 0) {
+                triggerNotification("Download Queue Completed with Errors", `Complete! ${event.files_completed || 0} files downloaded, but ${event.files_failed} files failed.`, true);
+            } else {
+                triggerNotification("SAMOnline FTP Downloader", "Download session finished.");
+            }
+            if (state.config.sound_alert) {
+                try {
+                    const audio = new Audio("assets/notification.mp3");
+                    audio.play().catch((err) => console.warn("Failed to play notification sound:", err));
+                } catch (e) {
+                    console.warn("Audio playback exception:", e);
+                }
             }
             if (state.config.auto_close && window.pywebview) {
                 window.close();
@@ -934,7 +969,12 @@ async function loadSystemInfo() {
         "Disk Free": `${formatBytes(payload.disk_free)} / ${formatBytes(payload.disk_total)}`,
     };
     els.systemList.innerHTML = Object.entries(entries)
-        .map(([key, value]) => `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`)
+        .map(([key, value]) => `
+            <div class="system-item">
+                <span class="label">${escapeHtml(key)}</span>
+                <span class="value">${escapeHtml(value)}</span>
+            </div>
+        `)
         .join("");
 }
 
@@ -975,14 +1015,13 @@ function attachEvents() {
         state.config = {
             ...state.config,
             appearance_preset: button.dataset.palette,
-            accent_color: palette.accent,
         };
-        settingEls.appearance_preset.value = button.dataset.palette;
-        settingEls.accent_color.value = palette.accent;
+        if (settingEls.appearance_preset) {
+            settingEls.appearance_preset.value = button.dataset.palette;
+        }
         applyAppearance();
-    });
-    settingEls.accent_color.addEventListener("input", (event) => {
-        updateConfigPreview("accent_color", event.target.value);
+        syncChoiceButtons();
+        saveSettings();
     });
     const systemTheme = window.matchMedia?.("(prefers-color-scheme: light)");
     systemTheme?.addEventListener?.("change", () => {
@@ -1043,13 +1082,19 @@ function attachEvents() {
         await navigator.clipboard.writeText(state.logs.join("\n"));
         toast("Log copied", "success");
     });
-    els.exportLogBtn.addEventListener("click", () => {
-        const blob = new Blob([state.logs.join("\n")], { type: "text/plain" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `samonline-log-${Date.now()}.txt`;
-        link.click();
-        URL.revokeObjectURL(link.href);
+    els.exportLogBtn.addEventListener("click", async () => {
+        const text = state.logs.join("\n");
+        if (window.pywebview?.api?.export_logs) {
+            const success = await window.pywebview.api.export_logs(text);
+            if (success) toast("Log exported successfully", "success");
+        } else {
+            const blob = new Blob([text], { type: "text/plain" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `samonline-log-${Date.now()}.txt`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
     });
 
     els.saveSettingsBtn.addEventListener("click", saveSettings);

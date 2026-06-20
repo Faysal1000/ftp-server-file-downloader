@@ -33,7 +33,6 @@ from app import (  # noqa: E402
 
 
 APP_NAME = "SAMOnline FTP Downloader"
-APP_VERSION = "1.0.0"
 APP_DATA_DIR = Path.home() / ".samonline"
 CONFIG_PATH = APP_DATA_DIR / "config.json"
 HISTORY_PATH = APP_DATA_DIR / "history.json"
@@ -44,6 +43,13 @@ else:
     BASE_DIR = Path(__file__).resolve().parent.parent
 
 FRONTEND_DIR = BASE_DIR / "frontend"
+
+VERSION_PATH = BASE_DIR / "version.json"
+try:
+    with open(VERSION_PATH, "r", encoding="utf-8") as f:
+        APP_VERSION = json.load(f).get("version", "1.0.0").strip()
+except Exception:
+    APP_VERSION = "1.0.0"
 
 app = Flask(__name__, static_folder=str(FRONTEND_DIR))
 
@@ -391,6 +397,9 @@ def download_one(file_data: dict[str, Any], config: dict[str, Any]) -> str:
                     if existing_bytes and response.status_code == 416 and expected_size and existing_bytes == expected_size:
                         break
                     if response.status_code not in {200, 206}:
+                        if response.status_code == 416 and existing_bytes > 0:
+                            part_file.unlink(missing_ok=True)
+                            raise ValueError("Server rejected range request (416). Resetting download.")
                         response.raise_for_status()
                     if existing_bytes and response.status_code != 206:
                         existing_bytes = 0
