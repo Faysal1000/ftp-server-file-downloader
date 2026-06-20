@@ -1,4 +1,4 @@
-# SAMOnline FTP Downloader
+# File Downloader by Faysal
 
 A high-performance desktop application for recursively traversing, browsing, and downloading files from HTTP open directory listings. It features a modern, responsive user interface to traverse nested server directories, allowing you to bulk-download folders or specific files while preserving the remote directory structure.
 
@@ -24,27 +24,27 @@ Go to the [**Releases**](../../releases/latest) page and download the executable
 
 | Executable | Target Platform |
 | :--- | :--- |
-| `FTP-Downloader-Windows.exe` | Windows 10/11 (64-bit) |
-| `FTP-Downloader-macOS-AppleSilicon.zip` | macOS (M1/M2/M3/M4/M5 Apple Silicon) |
-| `FTP-Downloader-Linux` | Linux (Ubuntu, Debian, Fedora, etc.) |
+| `File-Downloader-Windows.exe` | Windows 10/11 (64-bit) |
+| `File-Downloader-macOS-AppleSilicon.zip` | macOS (M1/M2/M3/M4/M5 Apple Silicon) |
+| `File-Downloader-Linux` | Linux (Ubuntu, Debian, Fedora, etc.) |
 
 ### Fast Shell Installation
 
 **1. Windows**: Paste this into Command Prompt (`cmd`) to download the Windows executable directly to your Desktop:
 ```cmd
-cd "%USERPROFILE%\Desktop" & curl -L -O https://github.com/Faysal1000/ftp-server-file-downloader/releases/latest/download/FTP-Downloader-Windows.exe
+cd "%USERPROFILE%\Desktop" & curl -L -O https://github.com/Faysal1000/ftp-server-file-downloader/releases/latest/download/File-Downloader-Windows.exe
 ```
 *(Double-click to run. If Windows SmartScreen warns you, click "More info" → "Run anyway")*
 
 **2. macOS (Apple Silicon)**: Paste this into Terminal to download, unzip, register execution permissions, and bypass Gatekeeper quarantine:
 ```bash
-cd ~/Desktop && curl -L -O https://github.com/Faysal1000/ftp-server-file-downloader/releases/latest/download/FTP-Downloader-macOS-AppleSilicon.zip && unzip -o FTP-Downloader-macOS-AppleSilicon.zip && rm FTP-Downloader-macOS-AppleSilicon.zip && chmod -R +x ~/Desktop/FTP-Downloader.app && xattr -cr ~/Desktop/FTP-Downloader.app
+cd ~/Desktop && curl -L -O https://github.com/Faysal1000/ftp-server-file-downloader/releases/latest/download/File-Downloader-macOS-AppleSilicon.zip && unzip -o File-Downloader-macOS-AppleSilicon.zip && rm File-Downloader-macOS-AppleSilicon.zip && chmod -R +x ~/Desktop/File-Downloader.app && xattr -cr ~/Desktop/File-Downloader.app
 ```
-*(Double-click the `FTP-Downloader.app` bundle on your Desktop to run)*
+*(Double-click the `File-Downloader.app` bundle on your Desktop to run)*
 
 **3. Linux**: Paste this into terminal to download and set execution permissions:
 ```bash
-cd ~/Desktop && curl -L -O https://github.com/Faysal1000/ftp-server-file-downloader/releases/latest/download/FTP-Downloader-Linux && chmod +x FTP-Downloader-Linux
+cd ~/Desktop && curl -L -O https://github.com/Faysal1000/ftp-server-file-downloader/releases/latest/download/File-Downloader-Linux && chmod +x File-Downloader-Linux
 ```
 
 ---
@@ -115,17 +115,17 @@ To package standalone binaries locally using PyInstaller:
 
 **macOS Build**:
 ```bash
-pyinstaller --noconfirm --onedir --windowed --name "FTP-Downloader" --icon "frontend/assets/icon.icns" --add-data "frontend:frontend" --add-data "version.json:." main.py
+pyinstaller --noconfirm --onedir --windowed --name "File-Downloader" --icon "frontend/assets/icon.icns" --add-data "frontend:frontend" --add-data "version.json:." main.py
 ```
 
 **Windows Build**:
 ```bash
-pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --icon "frontend/assets/icon.ico" --add-data "frontend;frontend" --add-data "version.json;." main.py
+pyinstaller --noconfirm --onefile --windowed --name "File-Downloader" --icon "frontend/assets/icon.ico" --add-data "frontend;frontend" --add-data "version.json;." main.py
 ```
 
 **Linux Build**:
 ```bash
-pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --add-data "frontend:frontend" --add-data "version.json:." main.py
+pyinstaller --noconfirm --onefile --windowed --name "File-Downloader" --add-data "frontend:frontend" --add-data "version.json:." main.py
 ```
 
 ---
@@ -134,7 +134,7 @@ pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --add-data 
 
 The project uses GitHub Actions (`.github/workflows/build.yml`) to automatically compile and release executables. Push a new tag with the version matching `version.json` to trigger compilation:
 ```bash
-git tag v2.0.3
-git push origin v2.0.3
+git tag v1.0.0
+git push origin v1.0.0
 ```
 This compile check tests execution compatibility, runs PyInstaller tasks for macOS/Windows/Linux, and automatically attaches build artifacts directly to the tag release.

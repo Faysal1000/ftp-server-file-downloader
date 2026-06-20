@@ -12,14 +12,14 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact_name: FTP-Downloader-Windows.exe
-            artifact_path: dist/FTP-Downloader-Windows.exe
+            artifact_name: File-Downloader-Windows.exe
+            artifact_path: dist/File-Downloader-Windows.exe
           - os: macos-latest
-            artifact_name: FTP-Downloader-macOS-AppleSilicon.zip
-            artifact_path: dist/FTP-Downloader-macOS-AppleSilicon.zip
+            artifact_name: File-Downloader-macOS-AppleSilicon.zip
+            artifact_path: dist/File-Downloader-macOS-AppleSilicon.zip
           - os: ubuntu-latest
-            artifact_name: FTP-Downloader-Linux
-            artifact_path: dist/FTP-Downloader-Linux
+            artifact_name: File-Downloader-Linux
+            artifact_path: dist/File-Downloader-Linux
 
     runs-on: ${{ matrix.os }}
 
@@ -57,31 +57,31 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            pyinstaller --noconfirm --onedir --windowed --name "FTP-Downloader" --icon "frontend/assets/icon.icns" --add-data "frontend:frontend" --add-data "version.json:." main.py
+            pyinstaller --noconfirm --onedir --windowed --name "File-Downloader" --icon "frontend/assets/icon.icns" --add-data "frontend:frontend" --add-data "version.json:." main.py
           else
-            pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --add-data "frontend:frontend" --add-data "version.json:." main.py
+            pyinstaller --noconfirm --onefile --windowed --name "File-Downloader" --add-data "frontend:frontend" --add-data "version.json:." main.py
           fi
 
       - name: Build executable (Windows)
         if: runner.os == 'Windows'
         run: |
-          pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --icon "frontend/assets/icon.ico" --add-data "frontend;frontend" --add-data "version.json;." main.py
+          pyinstaller --noconfirm --onefile --windowed --name "File-Downloader" --icon "frontend/assets/icon.ico" --add-data "frontend;frontend" --add-data "version.json;." main.py
 
       - name: Package Windows
         if: runner.os == 'Windows'
         run: |
-          move dist\FTP-Downloader.exe "dist\${{ matrix.artifact_name }}"
+          move dist\File-Downloader.exe "dist\${{ matrix.artifact_name }}"
 
       - name: Package macOS
         if: runner.os == 'macOS'
         run: |
           cd dist
-          zip -r "${{ matrix.artifact_name }}" "FTP-Downloader.app"
+          zip -r "${{ matrix.artifact_name }}" "File-Downloader.app"
 
       - name: Package Linux
         if: runner.os == 'Linux'
         run: |
-          mv dist/FTP-Downloader "dist/${{ matrix.artifact_name }}"
+          mv dist/File-Downloader "dist/${{ matrix.artifact_name }}"
           chmod +x "dist/${{ matrix.artifact_name }}"
 
       - name: Upload artifact
@@ -108,17 +108,17 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "SAMOnline FTP Downloader ${{ github.ref_name }}"
+          name: "File Downloader by Faysal ${{ github.ref_name }}"
           body: |
-            ## 📥 SAMOnline FTP Downloader
+            ## 📥 File Downloader by Faysal
 
             Download the file for your operating system and run it!
 
             | File | Platform |
             |------|----------|
-            | `FTP-Downloader-Windows.exe` | Windows 10/11 (64-bit) |
-            | `FTP-Downloader-macOS-AppleSilicon` | macOS (Apple M1/M2/M3/M4) |
-            | `FTP-Downloader-Linux` | Ubuntu / Debian / Fedora |
+            | `File-Downloader-Windows.exe` | Windows 10/11 (64-bit) |
+            | `File-Downloader-macOS-AppleSilicon.zip` | macOS (Apple M1/M2/M3/M4) |
+            | `File-Downloader-Linux` | Ubuntu / Debian / Fedora |
 
           files: artifacts/**/*
           draft: false
