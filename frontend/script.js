@@ -446,7 +446,7 @@ function ensureFolder(path) {
         path: clean,
         name: clean ? baseName(clean) : "Root Directory",
         children: [],
-        expanded: true,
+        expanded: !clean,
         selected: true,
         partial: false,
         status: "ready",
