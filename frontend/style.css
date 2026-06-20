@@ -491,6 +491,10 @@ select:focus,
     color: var(--purple-2);
 }
 
+.yellow {
+    color: var(--yellow);
+}
+
 .bar-track,
 .mini-track {
     position: relative;
@@ -524,6 +528,10 @@ table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
+}
+
+.file-table {
+    table-layout: fixed;
 }
 
 thead th {
@@ -568,10 +576,17 @@ tbody tr:hover {
 }
 
 .row-name {
+    flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: pointer;
+}
+
+.row-name.expanded {
+    white-space: normal;
+    word-break: break-all;
 }
 
 .expander {

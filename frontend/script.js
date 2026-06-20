@@ -72,6 +72,7 @@ const settingEls = {
 const statsEls = {
     totalFiles: $("#stat-total-files"),
     completed: $("#stat-completed"),
+    skipped: $("#stat-skipped"),
     remaining: $("#stat-remaining"),
     selected: $("#stat-selected"),
     totalSize: $("#stat-total-size"),
@@ -554,7 +555,7 @@ function renderRow(node, depth) {
                 <div class="file-name-cell" style="padding-left:${indent}px">
                     ${expander}
                     <span aria-hidden="true">${icon}</span>
-                    <span class="row-name" title="${escapeHtml(isFolder ? node.path || node.name : node.rel_path)}">${escapeHtml(node.name)}</span>
+                    <span class="row-name ${node.expandedName ? "expanded" : ""}" title="${escapeHtml(isFolder ? node.path || node.name : node.rel_path)}">${escapeHtml(node.name)}</span>
                 </div>
             </td>
             <td class="size-cell">${size}</td>
@@ -643,6 +644,7 @@ function updateStats() {
     const files = Array.from(state.files.values());
     const totalFiles = files.length;
     const complete = files.filter((file) => file.status === "complete").length;
+    const skipped = files.filter((file) => file.status === "skipped").length;
     const remaining = files.filter((file) => !["complete", "skipped"].includes(file.status)).length;
     const selected = files.filter((file) => file.selected).length;
     
@@ -660,6 +662,7 @@ function updateStats() {
 
     statsEls.totalFiles.textContent = totalFiles;
     statsEls.completed.textContent = complete;
+    statsEls.skipped.textContent = skipped;
     statsEls.remaining.textContent = remaining;
     statsEls.selected.textContent = selected;
     statsEls.totalSize.textContent = unknownTotal && totalSize === 0 ? "Unknown" : formatBytes(totalSize);
@@ -1179,6 +1182,18 @@ function attachEvents() {
         refreshFolderSelection();
         renderTree();
         updateActivityTextSelection();
+    });
+    els.fileBody.addEventListener("dblclick", (event) => {
+        const rowName = event.target.closest(".row-name");
+        if (rowName) {
+            const tr = rowName.closest("tr");
+            const nodeId = tr?.dataset.id;
+            const node = state.nodes.get(nodeId);
+            if (node) {
+                node.expandedName = !node.expandedName;
+                renderTree();
+            }
+        }
     });
 
     els.clearLogBtn.addEventListener("click", () => {
