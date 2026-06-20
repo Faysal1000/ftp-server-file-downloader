@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAMOnline FTP Downloader</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon" aria-hidden="true">☁</div>
+                <div>
+                    <h1>SAMOnline</h1>
+                    <p>FTP Downloader</p>
+                </div>
+            </div>
+
+            <nav class="nav-menu" aria-label="Primary navigation">
+                <button class="nav-item active" data-view="home"><span>📥</span> Home</button>
+                <button class="nav-item" data-view="downloads"><span>📋</span> Downloads</button>
+                <button class="nav-item" data-view="settings"><span>⚙</span> Settings</button>
+                <button class="nav-item" data-view="about"><span>ℹ</span> About</button>
+            </nav>
+
+            <section class="storage-widget" aria-label="Storage">
+                <svg class="storage-ring" viewBox="0 0 120 120" aria-hidden="true">
+                    <circle class="ring-track" cx="60" cy="60" r="48"></circle>
+                    <circle class="ring-fill" id="storage-ring" cx="60" cy="60" r="48"></circle>
+                    <text x="60" y="57" text-anchor="middle" class="ring-percent" id="storage-percent">0%</text>
+                    <text x="60" y="76" text-anchor="middle" class="ring-label">Used</text>
+                </svg>
+                <div class="storage-lines">
+                    <strong id="storage-used">0 GB / 0 GB</strong>
+                    <span id="storage-folder">Folder: 0 GB</span>
+                </div>
+            </section>
+
+            <div class="connection-panel">
+                <div class="connection-line">
+                    <span class="dot online" id="network-dot"></span>
+                    <span id="network-label">Connected</span>
+                </div>
+                <div class="server-line" id="server-label">Server not inspected</div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <section class="view active" id="view-home">
+                <div class="url-bar">
+                    <div class="url-input-wrap">
+                        <span aria-hidden="true">🌐</span>
+                        <input id="url-input" type="url" placeholder="Paste directory URL here..." autocomplete="off">
+                    </div>
+                    <button class="btn primary" id="inspect-btn">Inspect Folder</button>
+                    <button class="btn secondary" id="stop-scan-btn" disabled>Stop</button>
+                </div>
+                <div class="url-error" id="url-error" role="alert"></div>
+
+                <div class="tabs" role="tablist" aria-label="Home panels">
+                    <button class="tab active" data-tab="progress" role="tab">Progress</button>
+                    <button class="tab" data-tab="logs" role="tab">Logs</button>
+                </div>
+
+                <section class="tab-panel active" id="panel-progress">
+                    <div class="stats-grid">
+                        <article class="stat-card">
+                            <span>Total Files</span>
+                            <strong id="stat-total-files">0</strong>
+                        </article>
+                        <article class="stat-card">
+                            <span>Completed</span>
+                            <strong class="green" id="stat-completed">0</strong>
+                        </article>
+                        <article class="stat-card">
+                            <span>Remaining</span>
+                            <strong class="blue" id="stat-remaining">0</strong>
+                        </article>
+                        <article class="stat-card">
+                            <span>Total Size</span>
+                            <strong id="stat-total-size">0 B</strong>
+                        </article>
+                        <article class="stat-card">
+                            <span>Speed</span>
+                            <strong class="cyan" id="stat-speed">0 MB/s</strong>
+                        </article>
+                        <article class="stat-card">
+                            <span>ETA</span>
+                            <strong id="stat-eta">--</strong>
+                        </article>
+                        <article class="stat-card progress-stat">
+                            <div>
+                                <span>Progress</span>
+                                <strong class="purple" id="stat-progress">0%</strong>
+                            </div>
+                            <div class="bar-track">
+                                <div class="bar-fill" id="overall-progress"></div>
+                            </div>
+                        </article>
+                        <article class="stat-card">
+                            <span>Elapsed Time</span>
+                            <strong id="stat-elapsed">00:00:00</strong>
+                        </article>
+                    </div>
+
+                    <section class="tree-section">
+                        <table class="file-table" aria-label="Files found">
+                            <thead>
+                                <tr>
+                                    <th class="select-col">
+                                        <input id="select-all" type="checkbox" aria-label="Select all files">
+                                    </th>
+                                    <th class="name-col">Name</th>
+                                    <th>Size</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Speed</th>
+                                </tr>
+                            </thead>
+                            <tbody id="file-body"></tbody>
+                        </table>
+                        <div class="empty-state" id="empty-state">Paste a URL and click Inspect to start</div>
+                    </section>
+
+                    <div class="action-bar">
+                        <div class="action-left">
+                            <button class="btn primary" id="download-selected-btn" disabled>⬇ Download Selected</button>
+                            <button class="btn secondary" id="download-all-btn" disabled>Download All</button>
+                        </div>
+                        <div class="activity-text" id="activity-text">Idle</div>
+                        <div class="action-right">
+                            <button class="btn secondary" id="clear-selection-btn" disabled>Clear Selection</button>
+                            <button class="btn secondary" id="pause-btn" disabled>⏸ Pause</button>
+                            <button class="btn danger" id="cancel-btn" disabled>⊗ Cancel</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="tab-panel logs-panel" id="panel-logs">
+                    <div class="log-toolbar">
+                        <h2>Activity Log</h2>
+                        <div>
+                            <button class="btn secondary" id="clear-log-btn">Clear Log</button>
+                            <button class="btn secondary" id="copy-log-btn">Copy All</button>
+                            <button class="btn secondary" id="export-log-btn">Export Log</button>
+                        </div>
+                    </div>
+                    <div class="log-viewer" id="log-viewer"></div>
+                </section>
+            </section>
+
+            <section class="view" id="view-downloads">
+                <div class="page-header">
+                    <div>
+                        <h2>Downloads</h2>
+                        <p>History of download sessions</p>
+                    </div>
+                    <button class="btn danger" id="clear-history-btn">Clear History</button>
+                </div>
+                <div class="toolbar-row">
+                    <input class="search-input" id="history-search" type="search" placeholder="Search history...">
+                    <button class="btn secondary" id="refresh-history-btn">Refresh</button>
+                </div>
+                <section class="table-panel">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="date">Date</th>
+                                <th data-sort="source_url">Source URL</th>
+                                <th data-sort="files_completed">Files</th>
+                                <th data-sort="total_size">Total Size</th>
+                                <th data-sort="duration">Duration</th>
+                                <th data-sort="status">Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body"></tbody>
+                    </table>
+                    <div class="empty-state small" id="history-empty">No download history yet</div>
+                </section>
+            </section>
+
+            <section class="view" id="view-settings">
+                <div class="page-header settings-page-header">
+                    <div>
+                        <h2>Settings</h2>
+                        <p>Configuration saved to ~/.samonline/config.json</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn secondary" id="open-config-btn">Open Config File</button>
+                        <button class="btn secondary" id="reset-settings-btn">Reset Defaults</button>
+                        <button class="btn primary" id="save-settings-btn">Save Settings</button>
+                    </div>
+                </div>
+
+                <div class="settings-workspace">
+                    <aside class="settings-nav" aria-label="Settings categories">
+                        <button class="settings-nav-item active" data-settings-panel="download"><span>↓</span><strong>Download</strong><small>Folders and file handling</small></button>
+                        <button class="settings-nav-item" data-settings-panel="network"><span>↔</span><strong>Network</strong><small>Speed, retries, concurrency</small></button>
+                        <button class="settings-nav-item" data-settings-panel="scan"><span>⌕</span><strong>Scan</strong><small>Depth and filtering</small></button>
+                        <button class="settings-nav-item" data-settings-panel="notifications"><span>●</span><strong>Notifications</strong><small>Completion and error alerts</small></button>
+                        <button class="settings-nav-item" data-settings-panel="appearance"><span>◐</span><strong>Appearance</strong><small>Theme, color, font size</small></button>
+                    </aside>
+
+                    <div class="settings-content">
+                        <section class="settings-panel active" data-settings-panel="download">
+                            <div class="panel-heading">
+                                <div><h3>Download</h3><p>Choose where files land and how existing files are handled.</p></div>
+                                <span class="panel-pill">Local storage</span>
+                            </div>
+                            <div class="setting-list">
+                                <div class="setting-row stacked">
+                                    <div class="setting-copy"><strong>Download Folder</strong><span>Default destination for all download sessions.</span></div>
+                                    <div class="path-row">
+                                        <input id="setting-download-folder" type="text">
+                                        <button class="btn secondary" id="browse-folder-btn">Browse</button>
+                                        <button class="btn secondary" id="open-folder-btn">Open</button>
+                                    </div>
+                                </div>
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>Overwrite Existing Files</strong><span>Replace local files when downloading again.</span></span><input id="setting-overwrite" type="checkbox"><span class="switch-ui"></span></label>
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>Resume Broken Downloads</strong><span>Continue from existing .part files.</span></span><input id="setting-resume" type="checkbox"><span class="switch-ui"></span></label>
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>Skip Completed Files</strong><span>Leave correctly downloaded files untouched.</span></span><input id="setting-skip-completed" type="checkbox"><span class="switch-ui"></span></label>
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>Auto-close on Finish</strong><span>Close the app when all queued downloads complete.</span></span><input id="setting-auto-close" type="checkbox"><span class="switch-ui"></span></label>
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>Preserve Folder Structure</strong><span>Recreate the server folder hierarchy locally.</span></span><input id="setting-preserve" type="checkbox"><span class="switch-ui"></span></label>
+                            </div>
+                        </section>
+
+                        <section class="settings-panel" data-settings-panel="network">
+                            <div class="panel-heading">
+                                <div><h3>Network</h3><p>Keep bandwidth behavior predictable for large folders.</p></div>
+                                <span class="panel-pill">Transfer engine</span>
+                            </div>
+                            <div class="setting-list">
+                                <label class="setting-row"><span class="setting-copy"><strong>Max Concurrent Downloads</strong><span>Use 1 for SAMOnline-style sequential downloading.</span></span><input class="compact-input" id="setting-concurrent" type="number" min="1" max="10"></label>
+                                <label class="setting-row"><span class="setting-copy"><strong>Connection Timeout</strong><span>Seconds before a connection attempt is abandoned.</span></span><input class="compact-input" id="setting-timeout" type="number" min="3"></label>
+                                <label class="setting-row"><span class="setting-copy"><strong>Download Chunk Size</strong><span>Larger chunks can be smoother on stable LAN servers.</span></span><select class="compact-input" id="setting-chunk-size">
+                                    <option value="1048576">1 MB</option>
+                                    <option value="4194304">4 MB</option>
+                                    <option value="8388608">8 MB</option>
+                                    <option value="16777216">16 MB</option>
+                                </select></label>
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>Retry Failed Downloads</strong><span>Retry temporary server/network failures.</span></span><input id="setting-retry-failed" type="checkbox"><span class="switch-ui"></span></label>
+                                <label class="setting-row"><span class="setting-copy"><strong>Max Retries</strong><span>Number of attempts after the first failure.</span></span><input class="compact-input" id="setting-max-retries" type="number" min="0"></label>
+                                <label class="setting-row"><span class="setting-copy"><strong>Rate Limit</strong><span>Maximum speed in MB/s. 0 means unlimited.</span></span><input class="compact-input" id="setting-rate-limit" type="number" min="0" step="0.25"></label>
+                                <label class="setting-row stacked"><span class="setting-copy"><strong>User Agent</strong><span>Used for scan and download requests.</span></span><input id="setting-user-agent" type="text"></label>
+                            </div>
+                        </section>
+
+                        <section class="settings-panel" data-settings-panel="scan">
+                            <div class="panel-heading">
+                                <div><h3>Scan</h3><p>Control how deeply the app explores a directory listing.</p></div>
+                                <span class="panel-pill">Discovery</span>
+                            </div>
+                            <div class="setting-list">
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>Ask Server for File Sizes</strong><span>Use HEAD/Range requests when HTML does not show sizes.</span></span><input id="setting-ask-sizes" type="checkbox"><span class="switch-ui"></span></label>
+                                <label class="setting-row"><span class="setting-copy"><strong>Max Scan Depth</strong><span>Folder nesting limit during inspection.</span></span><input class="compact-input" id="setting-max-depth" type="number" min="0"></label>
+                                <label class="setting-row"><span class="setting-copy"><strong>File Type Filter</strong><span>Comma-separated extensions such as mkv, mp4. * includes all.</span></span><input class="medium-input" id="setting-file-filter" type="text" placeholder="*"></label>
+                                <label class="setting-row"><span class="setting-copy"><strong>Exclude Pattern</strong><span>Glob patterns like *.txt, thumbs/.</span></span><input class="medium-input" id="setting-exclude" type="text" placeholder="*.txt, thumbs/"></label>
+                            </div>
+                        </section>
+
+                        <section class="settings-panel" data-settings-panel="notifications">
+                            <div class="panel-heading">
+                                <div><h3>Notifications</h3><p>Decide when the app should interrupt you.</p></div>
+                                <span class="panel-pill">Alerts</span>
+                            </div>
+                            <div class="setting-list">
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>System Notification on Complete</strong><span>Show an OS notification after downloads finish.</span></span><input id="setting-notify-complete" type="checkbox"><span class="switch-ui"></span></label>
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>Sound Alert on Complete</strong><span>Play a sound after the queue finishes.</span></span><input id="setting-sound" type="checkbox"><span class="switch-ui"></span></label>
+                                <label class="setting-row switch-row"><span class="setting-copy"><strong>Notification on Error</strong><span>Notify when a file fails after retries.</span></span><input id="setting-notify-error" type="checkbox"><span class="switch-ui"></span></label>
+                            </div>
+                        </section>
+
+                        <section class="settings-panel" data-settings-panel="appearance">
+                            <div class="panel-heading">
+                                <div><h3>Appearance</h3><p>Pick a full UI palette, then fine tune if you want.</p></div>
+                                <span class="panel-pill">Live preview</span>
+                            </div>
+                            <div class="appearance-showcase">
+                                <div class="preview-window">
+                                    <div class="preview-sidebar"></div>
+                                    <div class="preview-main">
+                                        <span></span><span></span><strong></strong>
+                                    </div>
+                                </div>
+                                <div class="preview-copy">
+                                    <strong id="appearance-summary">Violet Stream</strong>
+                                    <span>Applies to buttons, focus rings, tabs, selected nav, progress, badges, and switches.</span>
+                                </div>
+                            </div>
+                            <div class="setting-list">
+                                <div class="setting-row">
+                                    <span class="setting-copy"><strong>Theme</strong><span>Dark, light, or follow the system appearance.</span></span>
+                                    <input id="setting-theme" type="hidden">
+                                    <div class="segmented" data-choice-for="theme">
+                                        <button type="button" data-value="dark">Dark</button>
+                                        <button type="button" data-value="light">Light</button>
+                                        <button type="button" data-value="system">System</button>
+                                    </div>
+                                </div>
+                                <div class="setting-row stacked">
+                                    <span class="setting-copy"><strong>Palette</strong><span>Ten complete color combinations. Custom color still works below.</span></span>
+                                    <input id="setting-preset" type="hidden">
+                                    <div class="palette-grid" id="palette-grid"></div>
+                                </div>
+                                <label class="setting-row">
+                                    <span class="setting-copy"><strong>Custom Accent</strong><span>Overrides the selected palette accent.</span></span>
+                                    <input class="color-input" id="setting-accent" type="color">
+                                </label>
+                                <div class="setting-row">
+                                    <span class="setting-copy"><strong>Font Size</strong><span>Changes labels, inputs, tables, cards, and controls immediately.</span></span>
+                                    <input id="setting-font-size" type="hidden">
+                                    <div class="segmented" data-choice-for="font_size">
+                                        <button type="button" data-value="small">Small</button>
+                                        <button type="button" data-value="medium">Medium</button>
+                                        <button type="button" data-value="large">Large</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </section>
+
+            <section class="view" id="view-about">
+                <div class="about-panel">
+                    <div class="about-mark">☁</div>
+                    <h2>SAMOnline FTP Downloader</h2>
+                    <p class="version-line" id="about-version">Version 1.0.0</p>
+                    <p class="about-copy">A desktop application for browsing and downloading files from HTTP open directory listings.</p>
+                    <dl class="system-list" id="system-list"></dl>
+                    <div class="about-actions">
+                        <button class="btn secondary" id="check-updates-btn">Check for Updates</button>
+                        <a class="btn secondary link-btn" href="mailto:faysalahmmed@example.com">Report Bug</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="toast-root" id="toast-root"></div>
+
+    <div class="update-modal-overlay hidden" id="update-modal">
+        <div class="update-modal-content">
+            <h3 id="update-title">Update Available</h3>
+            <p id="update-desc" class="update-copy">A new version is available.</p>
+            <div class="progress-container hidden" id="update-progress-container">
+                <div class="mini-track"><div class="mini-fill" id="update-progress-fill" style="width: 0%"></div></div>
+                <p id="update-status" class="update-status">Downloading...</p>
+            </div>
+            <div class="update-actions">
+                <button class="btn primary" id="update-now-btn">Update Now</button>
+                <button class="btn secondary" id="update-later-btn">Later</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
