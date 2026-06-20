@@ -100,8 +100,7 @@ def _get_current_app_path():
     return Path(__file__).resolve()
 
 def _get_update_download_path(update_info):
-    script_dir = Path(__file__).parent.resolve()
-    updates_dir = script_dir / ".updates"
+    updates_dir = Path.home() / ".samonline" / "updates"
     updates_dir.mkdir(parents=True, exist_ok=True)
     suffix = ".new" if update_info["package_type"] in {"windows_exe", "linux_binary"} else ".tmp"
     return updates_dir / f"{update_info['asset_name']}{suffix}"
