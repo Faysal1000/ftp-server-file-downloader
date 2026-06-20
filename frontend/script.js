@@ -377,10 +377,13 @@ function readConfigFromForm() {
         if (!el) return;
         if (el.type === "checkbox") {
             config[key] = el.checked;
-        } else if (el.type === "number") {
-            config[key] = Number(el.value);
-        } else if (key === "chunk_size") {
-            config[key] = Number(el.value);
+        } else if (el.type === "number" || key === "max_concurrent" || key === "chunk_size") {
+            let val = Number(el.value);
+            if (key === "max_concurrent") {
+                val = Math.max(1, Math.min(10, val));
+                el.value = val;
+            }
+            config[key] = val;
         } else {
             config[key] = el.value;
         }
