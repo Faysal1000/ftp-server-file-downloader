@@ -2,6 +2,8 @@
 
 A high-performance desktop application for recursively traversing, browsing, and downloading files from HTTP open directory listings. It features a modern, responsive user interface to traverse nested server directories, allowing you to bulk-download folders or specific files while preserving the remote directory structure.
 
+![File Downloader UI](screenshot.png)
+
 **No coding knowledge required** — download a single file, double-click, and start downloading.
 
 ---
