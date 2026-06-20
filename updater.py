@@ -110,7 +110,10 @@ def _format_download_size(byte_count):
     mb_count = byte_count / (1024 * 1024)
     return f"{mb_count:.1f} MB"
 
+update_cancel_event = threading.Event()
+
 def perform_update(update_info):
+    update_cancel_event.clear()
     def update_worker():
         window = webview.windows[0] if webview.windows else None
         def set_progress(percent, text):
@@ -131,6 +134,12 @@ def perform_update(update_info):
 
                 with open(download_path, "wb") as file_obj:
                     for chunk in response.iter_content(chunk_size=UPDATE_CHUNK_SIZE):
+                        if update_cancel_event.is_set():
+                            file_obj.close()
+                            if download_path.exists():
+                                download_path.unlink()
+                            set_progress(-2, "Update cancelled by user.")
+                            return
                         if not chunk:
                             continue
 

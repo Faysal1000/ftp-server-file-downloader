@@ -86,6 +86,18 @@ class NativeApi:
         updater.perform_update(update_info)
         return True
 
+    def cancel_update(self) -> bool:
+        updater.update_cancel_event.set()
+        return True
+
+    def open_url(self, url: str) -> bool:
+        import webbrowser
+        try:
+            webbrowser.open(url)
+            return True
+        except Exception:
+            return False
+
     def export_logs(self, logs_text: str) -> bool:
         window = webview.windows[0] if webview.windows else None
         if not window:
@@ -155,6 +167,7 @@ def main() -> None:
         width=1360,
         height=860,
         min_size=(1040, 680),
+        icon=str(icon_path),
     )
     webview.start(private_mode=False, debug=False)
 

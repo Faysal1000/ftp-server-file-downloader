@@ -1151,10 +1151,38 @@ function attachEvents() {
     let currentUpdateInfo = null;
 
     window.updateProgress = (percent, text) => {
+        if (percent === -2) {
+            $("#update-progress-container").classList.add("hidden");
+            $("#update-now-btn").classList.remove("hidden");
+            $("#update-now-btn").disabled = false;
+            $("#update-later-btn").classList.remove("hidden");
+            $("#update-later-btn").disabled = false;
+            $("#update-cancel-btn").classList.add("hidden");
+            toast("Update cancelled", "warning");
+            return;
+        }
+        if (percent === -1) {
+            $("#update-now-btn").classList.remove("hidden");
+            $("#update-now-btn").disabled = false;
+            $("#update-later-btn").classList.remove("hidden");
+            $("#update-later-btn").disabled = false;
+            $("#update-cancel-btn").classList.add("hidden");
+            toast(text, "error");
+            return;
+        }
         $("#update-progress-container").classList.remove("hidden");
         $("#update-progress-fill").style.width = `${percent}%`;
         $("#update-status").textContent = text;
     };
+
+    $("#report-bug-btn").addEventListener("click", () => {
+        const mailtoUrl = "mailto:faysalahmmed4200@gmail.com?subject=SAMOnline%20FTP%20Downloader%20Bug%20Report";
+        if (window.pywebview?.api?.open_url) {
+            window.pywebview.api.open_url(mailtoUrl);
+        } else {
+            window.open(mailtoUrl, "_blank");
+        }
+    });
 
     $("#check-updates-btn").addEventListener("click", async () => {
         if (!window.pywebview?.api?.check_for_updates) {
@@ -1170,6 +1198,12 @@ function attachEvents() {
                 currentUpdateInfo = info;
                 $("#update-title").textContent = `Update Available: ${info.version}`;
                 $("#update-desc").textContent = `A new version of SAMOnline FTP Downloader is available for your system.`;
+                $("#update-now-btn").classList.remove("hidden");
+                $("#update-now-btn").disabled = false;
+                $("#update-later-btn").classList.remove("hidden");
+                $("#update-later-btn").disabled = false;
+                $("#update-cancel-btn").classList.add("hidden");
+                $("#update-progress-container").classList.add("hidden");
                 $("#update-modal").classList.remove("hidden");
             } else {
                 if (info.error) toast(`Update check failed: ${info.error}`, "error");
@@ -1185,17 +1219,32 @@ function attachEvents() {
 
     $("#update-now-btn").addEventListener("click", () => {
         if (!currentUpdateInfo) return;
-        $("#update-now-btn").disabled = true;
-        $("#update-later-btn").disabled = true;
+        $("#update-now-btn").classList.add("hidden");
+        $("#update-later-btn").classList.add("hidden");
+        $("#update-cancel-btn").classList.remove("hidden");
+        $("#update-cancel-btn").disabled = false;
         $("#update-progress-container").classList.remove("hidden");
+        $("#update-progress-fill").style.width = "0%";
+        $("#update-status").textContent = "Connecting...";
         window.pywebview.api.perform_update(currentUpdateInfo);
     });
 
     $("#update-later-btn").addEventListener("click", () => {
         $("#update-modal").classList.add("hidden");
+        $("#update-now-btn").classList.remove("hidden");
         $("#update-now-btn").disabled = false;
+        $("#update-later-btn").classList.remove("hidden");
         $("#update-later-btn").disabled = false;
+        $("#update-cancel-btn").classList.add("hidden");
         $("#update-progress-container").classList.add("hidden");
+    });
+
+    $("#update-cancel-btn").addEventListener("click", () => {
+        $("#update-cancel-btn").disabled = true;
+        $("#update-status").textContent = "Cancelling...";
+        if (window.pywebview?.api?.cancel_update) {
+            window.pywebview.api.cancel_update();
+        }
     });
 
     window.addEventListener("online", updateNetworkStatus);

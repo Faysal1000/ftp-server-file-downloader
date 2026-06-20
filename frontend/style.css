@@ -1509,3 +1509,7 @@ body.theme-light {
     min-width: 30px;
     text-align: right;
 }
+
+.hidden {
+    display: none !important;
+}
