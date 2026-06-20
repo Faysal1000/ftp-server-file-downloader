@@ -1291,6 +1291,7 @@ async function requestNotificationPermission() {
 }
 
 async function init() {
+    renderPaletteGrid();
     attachEvents();
     updateNetworkStatus();
     setServerReachable(null);

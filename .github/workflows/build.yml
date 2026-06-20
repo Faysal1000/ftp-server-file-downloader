@@ -49,6 +49,10 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
+      - name: Verify Python compilation
+        run: |
+          python -m py_compile main.py backend/server.py
+
       - name: Build executable (Unix)
         if: runner.os != 'Windows'
         run: |

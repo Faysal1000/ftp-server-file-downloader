@@ -167,9 +167,8 @@ def main() -> None:
         width=1360,
         height=860,
         min_size=(1040, 680),
-        icon=str(icon_path),
     )
-    webview.start(private_mode=False, debug=False)
+    webview.start(private_mode=False, debug=False, icon=str(icon_path))
 
 
 if __name__ == "__main__":
