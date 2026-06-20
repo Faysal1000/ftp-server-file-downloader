@@ -73,6 +73,7 @@ const statsEls = {
     totalFiles: $("#stat-total-files"),
     completed: $("#stat-completed"),
     remaining: $("#stat-remaining"),
+    selected: $("#stat-selected"),
     totalSize: $("#stat-total-size"),
     speed: $("#stat-speed"),
     eta: $("#stat-eta"),
@@ -176,6 +177,38 @@ function toast(message, kind = "info") {
     item.textContent = message;
     els.toastRoot.appendChild(item);
     setTimeout(() => item.remove(), 3600);
+
+    if (kind === "error") {
+        playSoundAlert("error");
+    }
+}
+
+function playSoundAlert(soundType) {
+    if (!state.config?.sound_alert) return;
+    if (window.pywebview?.api?.play_sound) {
+        window.pywebview.api.play_sound(soundType);
+    } else {
+        try {
+            const filename = soundType === "success" ? "notification.mp3" : "error.mp3";
+            const audio = new Audio(`assets/${filename}`);
+            audio.play().catch((err) => console.warn(`Failed to play ${soundType} notification sound:`, err));
+        } catch (e) {
+            console.warn("Audio playback exception:", e);
+        }
+    }
+}
+
+function updateActivityTextSelection() {
+    const selectedCount = getSelectedFileIds().length;
+    if (selectedCount > 0) {
+        const files = Array.from(state.files.values()).filter((f) => f.selected);
+        const totalSize = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
+        els.activityText.textContent = `${selectedCount} file${selectedCount === 1 ? "" : "s"} selected for download (${formatBytes(totalSize)})`;
+    } else if (state.files.size > 0) {
+        els.activityText.textContent = `No files selected (Total: ${state.files.size} file${state.files.size === 1 ? "" : "s"})`;
+    } else {
+        els.activityText.textContent = "Idle";
+    }
 }
 
 function setBusyControls() {
@@ -184,6 +217,7 @@ function setBusyControls() {
     const hasFiles = state.files.size > 0;
     const selectedCount = getSelectedFileIds().length;
     els.downloadSelectedBtn.disabled = state.isScanning || state.isDownloading || selectedCount === 0;
+    els.downloadSelectedBtn.textContent = `⬇ Download Selected (${selectedCount})`;
     els.downloadAllBtn.disabled = state.isScanning || state.isDownloading || !hasFiles;
     els.clearSelectionBtn.disabled = !hasFiles || state.isScanning || state.isDownloading;
     els.pauseBtn.disabled = !state.isDownloading;
@@ -265,6 +299,21 @@ function applyAppearance() {
         applyCssVar("--muted", "#9aa3b8");
         applyCssVar("--dim", "#687188");
         applyCssVar("--input-bg", "#111421");
+
+        // Dynamically compute dark surfaces based on selected preset
+        const panelRgb = hexToRgb(palette.panel);
+        const bgRgb = hexToRgb(palette.bg);
+        applyCssVar("--surface-1", `rgba(${panelRgb.r}, ${panelRgb.g}, ${panelRgb.b}, 0.82)`);
+        applyCssVar("--surface-2", `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.74)`);
+        applyCssVar("--surface-3", `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.92)`);
+        applyCssVar("--surface-4", `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.96)`);
+        applyCssVar("--surface-5", `rgba(${panelRgb.r}, ${panelRgb.g}, ${panelRgb.b}, 0.5)`);
+        applyCssVar("--surface-6", `rgba(${panelRgb.r}, ${panelRgb.g}, ${panelRgb.b}, 0.6)`);
+        applyCssVar("--surface-7", `rgba(${panelRgb.r}, ${panelRgb.g}, ${panelRgb.b}, 0.78)`);
+        applyCssVar("--surface-8", `rgba(${panelRgb.r}, ${panelRgb.g}, ${panelRgb.b}, 0.8)`);
+        applyCssVar("--surface-solid", palette.panel);
+        applyCssVar("--log-bg", palette.bg);
+        applyCssVar("--track-bg", palette.panel2);
     }
 
     if (els.appearanceSummary) {
@@ -334,6 +383,7 @@ function readConfigFromForm() {
             config[key] = el.value;
         }
     });
+    config.accent_color = state.config.accent_color || currentPalette().accent;
     return config;
 }
 
@@ -479,7 +529,7 @@ function renderTree() {
         input.indeterminate = Boolean(node?.partial);
     });
     updateSelectAllCheckbox();
-    setBusyControls();
+    updateStats();
 }
 
 function renderRow(node, depth) {
@@ -569,6 +619,7 @@ function updateStats() {
     const totalFiles = files.length;
     const complete = files.filter((file) => file.status === "complete").length;
     const remaining = files.filter((file) => !["complete", "skipped"].includes(file.status)).length;
+    const selected = files.filter((file) => file.selected).length;
     
     const activeFiles = files.filter((f) => f.status !== "ready" && f.status !== "skipped");
     const totalSize = activeFiles.reduce((sum, file) => sum + Number(file.size || 0), 0);
@@ -585,6 +636,7 @@ function updateStats() {
     statsEls.totalFiles.textContent = totalFiles;
     statsEls.completed.textContent = complete;
     statsEls.remaining.textContent = remaining;
+    statsEls.selected.textContent = selected;
     statsEls.totalSize.textContent = unknownTotal && totalSize === 0 ? "Unknown" : formatBytes(totalSize);
     statsEls.speed.textContent = `${formatBytes(speed)}/s`;
     statsEls.eta.textContent = speed > 0 && remainingBytes > 0 ? formatDuration(remainingBytes / speed) : "--";
@@ -799,7 +851,8 @@ function handleEvent(event) {
             break;
         case "scan_done":
             state.isScanning = false;
-            els.activityText.textContent = `Scan complete. Found ${event.files || 0} files (${formatBytes(event.total_size || 0)}).`;
+            const scannedCount = event.files || 0;
+            els.activityText.textContent = `Scan complete. Found ${scannedCount} files (${formatBytes(event.total_size || 0)}). ${scannedCount} selected for download.`;
             toast("Inspection complete", "success");
             refreshFolderSelection();
             renderTree();
@@ -861,16 +914,10 @@ function handleEvent(event) {
             loadHistory();
             if (event.files_failed > 0) {
                 triggerNotification("Download Queue Completed with Errors", `Complete! ${event.files_completed || 0} files downloaded, but ${event.files_failed} files failed.`, true);
+                playSoundAlert("error");
             } else {
                 triggerNotification("SAMOnline FTP Downloader", "Download session finished.");
-            }
-            if (state.config.sound_alert) {
-                try {
-                    const audio = new Audio("assets/notification.mp3");
-                    audio.play().catch((err) => console.warn("Failed to play notification sound:", err));
-                } catch (e) {
-                    console.warn("Audio playback exception:", e);
-                }
+                playSoundAlert("success");
             }
             if (state.config.auto_close && window.pywebview) {
                 window.close();
@@ -1015,6 +1062,7 @@ function attachEvents() {
         state.config = {
             ...state.config,
             appearance_preset: button.dataset.palette,
+            accent_color: palette.accent,
         };
         if (settingEls.appearance_preset) {
             settingEls.appearance_preset.value = button.dataset.palette;
@@ -1041,6 +1089,7 @@ function attachEvents() {
         state.files.forEach((file) => { file.selected = false; });
         refreshFolderSelection();
         renderTree();
+        updateActivityTextSelection();
     });
     els.selectAll.addEventListener("change", () => {
         state.files.forEach((file) => { file.selected = els.selectAll.checked; });
@@ -1051,6 +1100,7 @@ function attachEvents() {
             }
         });
         renderTree();
+        updateActivityTextSelection();
     });
 
     els.fileBody.addEventListener("click", (event) => {
@@ -1072,6 +1122,7 @@ function attachEvents() {
         setNodeSelection(event.target.dataset.nodeId, event.target.checked);
         refreshFolderSelection();
         renderTree();
+        updateActivityTextSelection();
     });
 
     els.clearLogBtn.addEventListener("click", () => {

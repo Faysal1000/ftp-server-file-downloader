@@ -73,7 +73,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "file_filter": "*",
     "exclude_pattern": "",
     "notify_complete": True,
-    "sound_alert": False,
+    "sound_alert": True,
     "notify_error": True,
     "theme": "dark",
     "appearance_preset": "violet",
@@ -406,15 +406,16 @@ def download_one(file_data: dict[str, Any], config: dict[str, Any]) -> str:
                         downloaded = 0
                         mode = "wb"
 
-                    if expected_size is None:
-                        ranged_total = content_range_total(response.headers)
-                        content_length = content_length_from_headers(response.headers)
-                        if ranged_total is not None:
-                            expected_size = ranged_total
-                        elif content_length is not None:
-                            expected_size = content_length + existing_bytes
-                        if expected_size is not None:
-                            update_file(file_id, size=expected_size)
+                    # Always trust HTTP response headers over HTML-parsed/approximate remote.size
+                    ranged_total = content_range_total(response.headers)
+                    content_length = content_length_from_headers(response.headers)
+                    if ranged_total is not None:
+                        expected_size = ranged_total
+                    elif content_length is not None:
+                        expected_size = content_length + existing_bytes
+
+                    if expected_size is not None:
+                        update_file(file_id, size=expected_size)
 
                     with part_file.open(mode) as handle:
                         for chunk in response.iter_content(chunk_size=chunk_size):

@@ -18,7 +18,7 @@ except ImportError as exc:
         "  /opt/miniconda3/bin/conda run -n py312 pip install -r requirements.txt"
     ) from exc
 
-from backend.server import CONFIG_PATH, FRONTEND_DIR, app as flask_app, ensure_data_files
+from backend.server import CONFIG_PATH, FRONTEND_DIR, app as flask_app, ensure_data_files, load_config
 import updater
 
 def find_free_port(start: int = 5050) -> int:
@@ -118,6 +118,45 @@ class NativeApi:
             except Exception:
                 pass
         return False
+
+    def play_sound(self, sound_type: str) -> bool:
+        print(f"[NATIVE] play_sound called with: {sound_type}")
+        try:
+            config = load_config()
+            print(f"[NATIVE] sound_alert setting is: {config.get('sound_alert')}")
+            if not config.get("sound_alert"):
+                return False
+
+            filename = "notification.mp3" if sound_type == "success" else "error.mp3"
+            sound_path = FRONTEND_DIR / "assets" / filename
+            print(f"[NATIVE] sound file path: {sound_path} (exists={sound_path.exists()})")
+            if not sound_path.exists():
+                return False
+
+            if sys.platform == "darwin":
+                print(f"[NATIVE] running: afplay {sound_path}")
+                subprocess.Popen(["afplay", str(sound_path)])
+                return True
+            elif os.name == "nt" or sys.platform == "win32":
+                ps_cmd = f"""
+                Add-Type -AssemblyName presentationcore
+                $player = New-Object System.Windows.Media.MediaPlayer
+                $player.Open('{str(sound_path)}')
+                $player.Play()
+                Start-Sleep -s 5
+                """
+                subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_cmd])
+                return True
+            else:
+                for cmd in ["paplay", "aplay", "play"]:
+                    try:
+                        subprocess.Popen([cmd, str(sound_path)])
+                        return True
+                    except FileNotFoundError:
+                        continue
+                return False
+        except Exception:
+            return False
 
     def show_notification(self, title: str, message: str) -> bool:
         try:
