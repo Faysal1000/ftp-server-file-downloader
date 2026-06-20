@@ -57,7 +57,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            pyinstaller --noconfirm --onedir --windowed --name "FTP-Downloader" --add-data "frontend:frontend" --add-data "version.json:." main.py
+            pyinstaller --noconfirm --onedir --windowed --name "FTP-Downloader" --icon "frontend/assets/icon.icns" --add-data "frontend:frontend" --add-data "version.json:." main.py
           else
             pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --add-data "frontend:frontend" --add-data "version.json:." main.py
           fi
@@ -65,7 +65,7 @@ jobs:
       - name: Build executable (Windows)
         if: runner.os == 'Windows'
         run: |
-          pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --add-data "frontend;frontend" --add-data "version.json;." main.py
+          pyinstaller --noconfirm --onefile --windowed --name "FTP-Downloader" --icon "frontend/assets/icon.ico" --add-data "frontend;frontend" --add-data "version.json;." main.py
 
       - name: Package Windows
         if: runner.os == 'Windows'
