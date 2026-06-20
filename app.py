@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Core scanner utilities for SAMOnline FTP Downloader.
+Core scanner utilities for File Downloader by Faysal.
 
 The desktop shell lives in main.py/backend/server.py/frontend/*. This module is
 kept UI-free so it can be tested, packaged, and reused by the Flask backend.

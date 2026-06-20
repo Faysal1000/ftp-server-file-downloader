@@ -103,7 +103,7 @@ class NativeApi:
         if not window:
             return False
         
-        default_filename = f"samonline-log-{int(time.time())}.txt"
+        default_filename = f"file-downloader-log-{int(time.time())}.txt"
         result = window.create_file_dialog(
             webview.SAVE_DIALOG, 
             directory=str(Path.home() / "Desktop"), 
@@ -175,7 +175,7 @@ class NativeApi:
                 $TextNodes = $Template.GetElementsByTagName("text")
                 $TextNodes.Item(0).AppendChild($Template.CreateTextNode("{escaped_title}")) | Out-Null
                 $TextNodes.Item(1).AppendChild($Template.CreateTextNode("{escaped_message}")) | Out-Null
-                $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("SAMOnline FTP Downloader")
+                $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("File Downloader by Faysal")
                 $Toast = [Windows.UI.Notifications.ToastNotification]::new($Template)
                 $Notifier.Show($Toast)
                 """
@@ -200,7 +200,7 @@ def main() -> None:
 
     icon_path = FRONTEND_DIR / "assets" / "file_icon.png"
     webview.create_window(
-        "SAMOnline FTP Downloader",
+        "File Downloader by Faysal",
         f"http://127.0.0.1:{port}/",
         js_api=NativeApi(),
         width=1360,

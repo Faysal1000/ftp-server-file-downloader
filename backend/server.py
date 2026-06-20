@@ -10,7 +10,7 @@ import sys
 import threading
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, FIRST_COMPLETED
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -32,8 +32,8 @@ from app import (  # noqa: E402
 )
 
 
-APP_NAME = "SAMOnline FTP Downloader"
-APP_DATA_DIR = Path.home() / ".samonline"
+APP_NAME = "File Downloader by Faysal"
+APP_DATA_DIR = Path.home() / ".file_downloader_by_faysal"
 CONFIG_PATH = APP_DATA_DIR / "config.json"
 HISTORY_PATH = APP_DATA_DIR / "history.json"
 
@@ -55,7 +55,7 @@ app = Flask(__name__, static_folder=str(FRONTEND_DIR))
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "download_folder": "~/Downloads/SAMOnline FTP Downloads",
+    "download_folder": "~/Downloads/File Downloader by Faysal Downloads",
     "overwrite_files": False,
     "resume_broken": True,
     "skip_completed": True,
@@ -502,7 +502,6 @@ def download_runner(files: list[dict[str, Any]], config: dict[str, Any], session
     failed = 0
     cancelled = False
     total_size = sum(int(file.get("size") or 0) for file in files)
-    max_workers = max(1, min(10, int(config["max_concurrent"])))
 
     try:
         publish("download_started", total=len(files), total_size=total_size, session_id=session_id)
@@ -510,39 +509,76 @@ def download_runner(files: list[dict[str, Any]], config: dict[str, Any], session
         for file_data in files:
             update_file(str(file_data["id"]), status="queued", progress=file_data.get("progress", 0), speed=0)
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_map = {executor.submit(download_one, file_data, config): file_data for file_data in files}
-            for future in as_completed(future_map):
-                file_data = future_map[future]
-                file_id = str(file_data["id"])
-                rel_path = str(file_data["rel_path"])
-                if download_stop_event.is_set():
-                    cancelled = True
-                try:
-                    result = future.result()
-                    if result == "complete":
-                        completed += 1
-                    elif result == "skipped":
-                        skipped += 1
-                    elif result == "cancelled":
-                        cancelled = True
-                    else:
-                        failed += 1
-                except Exception as exc:  # noqa: BLE001 - per-file failure.
-                    failed += 1
-                    update_file(file_id, status="error", speed=0, error=str(exc))
-                    log("ERROR", f"Failed: {rel_path} - {exc}")
+        pending_files = list(files)
+        active_futures = {}
 
-                publish(
-                    "download_summary",
-                    completed=completed,
-                    skipped=skipped,
-                    failed=failed,
-                    total=len(files),
-                    cancelled=cancelled,
-                )
-                if cancelled:
-                    download_stop_event.set()
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            while (pending_files or active_futures) and not download_stop_event.is_set():
+                # Clean up completed futures
+                done_futures = [f for f in active_futures if f.done()]
+                for f in done_futures:
+                    file_data = active_futures.pop(f)
+                    file_id = str(file_data["id"])
+                    rel_path = str(file_data["rel_path"])
+                    if download_stop_event.is_set():
+                        cancelled = True
+                    try:
+                        result = f.result()
+                        if result == "complete":
+                            completed += 1
+                        elif result == "skipped":
+                            skipped += 1
+                        elif result == "cancelled":
+                            cancelled = True
+                        else:
+                            failed += 1
+                    except Exception as exc:  # noqa: BLE001 - per-file failure.
+                        failed += 1
+                        update_file(file_id, status="error", speed=0, error=str(exc))
+                        log("ERROR", f"Failed: {rel_path} - {exc}")
+
+                    publish(
+                        "download_summary",
+                        completed=completed,
+                        skipped=skipped,
+                        failed=failed,
+                        total=len(files),
+                        cancelled=cancelled,
+                    )
+                    if cancelled:
+                        download_stop_event.set()
+
+                if download_stop_event.is_set():
+                    break
+
+                # Get latest max concurrent setting dynamically
+                current_config = load_config()
+                current_max = max(1, min(10, int(current_config.get("max_concurrent") or 1)))
+
+                # Submit new files if we have capacity and files are pending
+                while len(active_futures) < current_max and pending_files:
+                    file_data = pending_files.pop(0)
+                    future = executor.submit(download_one, file_data, current_config)
+                    active_futures[future] = file_data
+
+                # Wait for any active futures to finish, up to 0.2 seconds
+                if active_futures:
+                    wait(list(active_futures.keys()), timeout=0.2, return_when=FIRST_COMPLETED)
+                else:
+                    time.sleep(0.1)
+
+            # If stopped, cancel remaining files
+            if download_stop_event.is_set():
+                cancelled = True
+                for file_data in pending_files:
+                    update_file(str(file_data["id"]), status="cancelled", speed=0)
+                # Wait for running tasks to stop
+                wait(list(active_futures.keys()))
+                for f in active_futures:
+                    file_data = active_futures[f]
+                    file_id = str(file_data["id"])
+                    update_file(file_id, status="cancelled", speed=0)
+
     finally:
         duration = time.monotonic() - started
         with state_lock:
@@ -638,6 +674,25 @@ def api_scan_stop() -> Response:
     scan_stop_event.set()
     log("WARN", "Stopping inspection after the current request.")
     return jsonify({"status": "stopping"})
+
+
+@app.route("/api/scan/clear", methods=["POST"])
+def api_scan_clear() -> Response:
+    with state_lock:
+        if state["is_scanning"] or state["is_downloading"]:
+            return jsonify({"error": "The app is busy."}), 409
+        state["files"] = {}
+        state["file_order"] = []
+        state["folders"] = set()
+        state["scanned_url"] = ""
+        state["is_scanning"] = False
+        state["is_downloading"] = False
+        state["is_paused"] = False
+        state["download_started_at"] = None
+        state["active_session_id"] = None
+    log("SYSTEM", "Inspection cleared.")
+    publish("hello", state=public_state())
+    return jsonify({"status": "cleared"})
 
 
 @app.route("/api/download", methods=["POST"])

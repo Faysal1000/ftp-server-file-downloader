@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAMOnline FTP Downloader</title>
+    <title>File Downloader by Faysal</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -14,8 +14,8 @@
             <div class="brand">
                 <div class="brand-icon" aria-hidden="true">☁</div>
                 <div>
-                    <h1>SAMOnline</h1>
-                    <p>FTP Downloader</p>
+                    <h1>File Downloader</h1>
+                    <p>by Faysal</p>
                 </div>
             </div>
 
@@ -57,6 +57,7 @@
                     </div>
                     <button class="btn primary" id="inspect-btn">Inspect Folder</button>
                     <button class="btn secondary" id="stop-scan-btn" disabled>Stop</button>
+                    <button class="btn secondary" id="clear-inspect-btn">Clear</button>
                 </div>
                 <div class="url-error" id="url-error" role="alert"></div>
 
@@ -192,7 +193,7 @@
                 <div class="page-header settings-page-header">
                     <div>
                         <h2>Settings</h2>
-                        <p>Configuration saved to ~/.samonline/config.json</p>
+                        <p>Configuration saved to ~/.file_downloader_by_faysal/config.json</p>
                     </div>
                     <div class="header-actions">
                         <button class="btn secondary" id="open-config-btn">Open Config File</button>
@@ -329,11 +330,18 @@
             <section class="view" id="view-about">
                 <div class="about-panel">
                     <div class="about-mark">☁</div>
-                    <h2>SAMOnline FTP Downloader</h2>
+                    <h2>File Downloader by Faysal</h2>
                     <p class="version-line" id="about-version">Version 1.0.0</p>
-                    <p class="about-copy">A desktop application for browsing and downloading files from HTTP open directory listings.</p>
-                    <div class="system-list" id="system-list"></div>
-                    <div class="about-actions">
+                    <p class="about-copy">File Downloader by Faysal is a fast, multi-threaded desktop application designed to easily inspect, search, and download files from HTTP directory listings and FTP servers.</p>
+                    <div class="developer-info" style="margin-top: 15px; display: grid; gap: 8px; text-align: center;">
+                        <strong>Developer: Faysal Ahmmed</strong>
+                        <div class="contact-links" style="display: flex; justify-content: center; gap: 14px; font-size: var(--fs-md);">
+                            <a href="mailto:faysalahmmed4200@gmail.com" class="link" style="color: var(--cyan); text-decoration: none;">📧 faysalahmmed4200@gmail.com</a>
+                            <a href="https://www.facebook.com/faysal.ahmmed.2001" target="_blank" class="link" style="color: var(--blue); text-decoration: none;">📘 Facebook Profile</a>
+                        </div>
+                    </div>
+                    <div class="system-list" id="system-list" style="margin-top: 20px;"></div>
+                    <div class="about-actions" style="margin-top: 20px;">
                         <button class="btn secondary" id="check-updates-btn">Check for Updates</button>
                         <button class="btn secondary" id="report-bug-btn">Report Bug</button>
                     </div>

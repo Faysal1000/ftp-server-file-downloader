@@ -6,6 +6,7 @@ const els = {
     urlError: $("#url-error"),
     inspectBtn: $("#inspect-btn"),
     stopScanBtn: $("#stop-scan-btn"),
+    clearInspectBtn: $("#clear-inspect-btn"),
     downloadSelectedBtn: $("#download-selected-btn"),
     downloadAllBtn: $("#download-all-btn"),
     clearSelectionBtn: $("#clear-selection-btn"),
@@ -214,6 +215,7 @@ function updateActivityTextSelection() {
 function setBusyControls() {
     els.inspectBtn.disabled = state.isScanning || state.isDownloading;
     els.stopScanBtn.disabled = !state.isScanning;
+    els.clearInspectBtn.disabled = state.isScanning || state.isDownloading;
     const hasFiles = state.files.size > 0;
     const selectedCount = getSelectedFileIds().length;
     els.downloadSelectedBtn.disabled = state.isScanning || state.isDownloading || selectedCount === 0;
@@ -673,10 +675,17 @@ function updateNetworkStatus() {
 
 function setServerReachable(value) {
     state.serverReachable = value;
+    els.serverLabel.classList.remove("server-reachable", "server-unreachable");
     if (value === null) {
         els.serverLabel.textContent = "Server not inspected";
     } else {
-        els.serverLabel.textContent = value ? "Server reachable" : "Server unreachable";
+        if (value) {
+            els.serverLabel.textContent = "Server reachable";
+            els.serverLabel.classList.add("server-reachable");
+        } else {
+            els.serverLabel.textContent = "Server unreachable";
+            els.serverLabel.classList.add("server-unreachable");
+        }
     }
 }
 
@@ -749,6 +758,24 @@ async function startScan() {
 
 async function stopScan() {
     await api("/api/scan/stop", { method: "POST" });
+}
+
+async function clearInspection() {
+    if (state.isScanning || state.isDownloading) {
+        toast("Cannot clear while app is busy", "error");
+        return;
+    }
+    try {
+        await api("/api/scan/clear", { method: "POST" });
+        els.urlInput.value = "";
+        resetTree();
+        setServerReachable(null);
+        state.scannedUrl = "";
+        els.activityText.textContent = "Idle";
+        toast("Inspection cleared", "success");
+    } catch (error) {
+        toast(error.message, "error");
+    }
 }
 
 async function startDownload(mode) {
@@ -916,7 +943,7 @@ function handleEvent(event) {
                 triggerNotification("Download Queue Completed with Errors", `Complete! ${event.files_completed || 0} files downloaded, but ${event.files_failed} files failed.`, true);
                 playSoundAlert("error");
             } else {
-                triggerNotification("SAMOnline FTP Downloader", "Download session finished.");
+                triggerNotification("File Downloader by Faysal", "Download session finished.");
                 playSoundAlert("success");
             }
             if (state.config.auto_close && window.pywebview) {
@@ -940,13 +967,17 @@ function handleEvent(event) {
 
 function hydrateState(snapshot) {
     if (!snapshot) return;
-    state.scannedUrl = snapshot.scanned_url || state.scannedUrl;
+    state.scannedUrl = snapshot.scanned_url !== undefined ? snapshot.scanned_url : state.scannedUrl;
     state.isScanning = Boolean(snapshot.is_scanning);
     state.isDownloading = Boolean(snapshot.is_downloading);
     state.isPaused = Boolean(snapshot.is_paused);
     resetTree();
     (snapshot.folders || []).forEach((folder) => addFolder(folder));
     (snapshot.files || []).forEach((file) => addFile(file));
+    if (!state.scannedUrl) {
+        els.urlInput.value = "";
+        els.activityText.textContent = "Idle";
+    }
     setBusyControls();
 }
 
@@ -1013,7 +1044,8 @@ async function loadSystemInfo() {
         Python: payload.python,
         "Config File": payload.config_path,
         "Download Folder": payload.download_folder,
-        "Disk Free": `${formatBytes(payload.disk_free)} / ${formatBytes(payload.disk_total)}`,
+        "Disk Free": formatBytes(payload.disk_free),
+        "Disk Total": formatBytes(payload.disk_total),
     };
     els.systemList.innerHTML = Object.entries(entries)
         .map(([key, value]) => `
@@ -1081,6 +1113,7 @@ function attachEvents() {
         if (event.key === "Enter") startScan();
     });
     els.stopScanBtn.addEventListener("click", stopScan);
+    els.clearInspectBtn.addEventListener("click", clearInspection);
     els.downloadSelectedBtn.addEventListener("click", () => startDownload("selected"));
     els.downloadAllBtn.addEventListener("click", () => startDownload("all"));
     els.pauseBtn.addEventListener("click", togglePause);
@@ -1142,7 +1175,7 @@ function attachEvents() {
             const blob = new Blob([text], { type: "text/plain" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `samonline-log-${Date.now()}.txt`;
+            link.download = `file-downloader-log-${Date.now()}.txt`;
             link.click();
             URL.revokeObjectURL(link.href);
         }
@@ -1227,7 +1260,7 @@ function attachEvents() {
     };
 
     $("#report-bug-btn").addEventListener("click", () => {
-        const mailtoUrl = "mailto:faysalahmmed4200@gmail.com?subject=SAMOnline%20FTP%20Downloader%20Bug%20Report";
+        const mailtoUrl = "mailto:faysalahmmed4200@gmail.com?subject=File%20Downloader%20by%20Faysal%20Bug%20Report";
         if (window.pywebview?.api?.open_url) {
             window.pywebview.api.open_url(mailtoUrl);
         } else {
@@ -1248,7 +1281,7 @@ function attachEvents() {
             if (info.update_available) {
                 currentUpdateInfo = info;
                 $("#update-title").textContent = `Update Available: ${info.version}`;
-                $("#update-desc").textContent = `A new version of SAMOnline FTP Downloader is available for your system.`;
+                $("#update-desc").textContent = `A new version of File Downloader by Faysal is available for your system.`;
                 $("#update-now-btn").classList.remove("hidden");
                 $("#update-now-btn").disabled = false;
                 $("#update-later-btn").classList.remove("hidden");
@@ -1354,7 +1387,7 @@ async function init() {
     await requestNotificationPermission();
     setInterval(updateElapsed, 1000);
     setInterval(updateStorage, 5000);
-    addLog("SYSTEM", "SAMOnline FTP Downloader ready.");
+    addLog("SYSTEM", "File Downloader by Faysal ready.");
 }
 
 init().catch((error) => {

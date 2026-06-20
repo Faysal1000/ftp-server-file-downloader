@@ -75,7 +75,7 @@ button {
 
 .app-shell {
     display: grid;
-    grid-template-columns: 224px minmax(0, 1fr);
+    grid-template-columns: 248px minmax(0, 1fr);
     width: 100vw;
     height: 100vh;
 }
@@ -121,14 +121,16 @@ button {
 }
 
 .brand h1 {
-    font-size: var(--fs-2xl);
+    font-size: var(--fs-xl);
     line-height: 1.1;
     letter-spacing: 0;
+    white-space: nowrap;
 }
 
 .brand p {
     color: var(--muted);
     font-size: var(--fs-sm);
+    white-space: nowrap;
 }
 
 .nav-menu {
@@ -165,6 +167,7 @@ button {
 }
 
 .storage-widget {
+    margin-top: auto;
     display: grid;
     gap: 12px;
     padding: 14px;
@@ -225,8 +228,15 @@ button {
     font-size: var(--fs-sm);
 }
 
+.server-line.server-reachable {
+    color: var(--green);
+}
+
+.server-line.server-unreachable {
+    color: var(--red);
+}
+
 .connection-panel {
-    margin-top: auto;
     display: grid;
     gap: 6px;
     padding-top: 14px;
@@ -280,7 +290,7 @@ button {
 
 .url-bar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     gap: 10px;
     align-items: center;
 }
